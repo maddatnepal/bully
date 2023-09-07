@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <conio.h> // For getch()
+#include <windows.h> // For Sleep
 
 // Simulated node structure
 typedef struct Node {
@@ -12,15 +14,15 @@ typedef struct Node {
 // Simulated network of nodes
 Node* nodes;
 
-// Simulate sending a message
+// Simulate sending a message with a random delay
 void sendMessage(int sender, int receiver, const char* message) {
     printf("Node %d sends '%s' to Node %d\n", sender, message, receiver);
+    int sleepDuration = 5000 + (rand() % 6000); // Random sleep between 5000 and 11000 milliseconds (5 to 11 seconds)
+    Sleep(sleepDuration);
 }
 
 // Election process
-// Election process
 void initiateElection(int coordinator, int numNodes) {
-	printf("");
     printf("Node %d initiates election.\n", coordinator);
 
     int coordinatorPriority = nodes[coordinator].priority; // Get the priority of the coordinator
@@ -41,7 +43,7 @@ void initiateElection(int coordinator, int numNodes) {
 // Handling election messages
 void handleElectionMessage(int sender) {
     printf("Node %d received ELECTION message.\n", nodes[sender].id);
-    
+
     // Simulate responding with OK message if the node has a higher priority
     if (nodes[sender].priority < nodes[nodes[sender].id].priority) {
         sendMessage(nodes[sender].id, sender, "OK");
@@ -52,10 +54,6 @@ void handleElectionMessage(int sender) {
 void handleVictoryMessage(int newLeader) {
     printf("Node %d received VICTORY message. New leader is Node %d.\n", nodes[newLeader].id, nodes[newLeader].id);
 }
-
-// ...
-
-// ...
 
 int main() {
     int numNodes;
@@ -76,53 +74,83 @@ int main() {
         scanf("%d", &nodes[i].active);
     }
 
-    // Find and print the initial coordinator
-    int initialCoordinator = -1;
+    int coordinator = -1;
+
+    // Find the initial coordinator with the highest priority
     for (int i = 0; i < numNodes; ++i) {
-        if (nodes[i].active) {
-            initialCoordinator = i;
-            break;
+        if (nodes[i].active && (coordinator == -1 || nodes[i].priority > nodes[coordinator].priority)) {
+            coordinator = i;
         }
     }
 
-    if (initialCoordinator != -1) {
-        printf("Initial coordinator is Node %d.\n", initialCoordinator);
+    if (coordinator != -1) {
+        printf("Initial coordinator is Node %d with priority %d.\n", coordinator, nodes[coordinator].priority);
     } else {
         printf("No active nodes initially.\n");
+        free(nodes); // Free memory and exit if there is no coordinator
+        return 0;
     }
 
-    // Ask the user which node to mark as failed
-    int failedNode;
-    printf("Enter the node number you want to mark as failed: ");
-    scanf("%d", &failedNode);
-
-    if (failedNode >= 0 && failedNode < numNodes) {
-        nodes[failedNode].active = false;
-        printf("Node %d marked as failed.\n", failedNode);
-    } else {
-        printf("Invalid node number.\n");
-    }
-
-    // Simulate election process initiated by the coordinator (Node 1)
-    int coordinator = 1;
-    initiateElection(coordinator, numNodes);
-
-    // Simulate handling of messages and determining new leader
-    // ...
-
-    // Find and print the new coordinator
-    int newCoordinator = -1;
-    for (int i = 0; i < numNodes; ++i) {
-        if (nodes[i].active) {
-            newCoordinator = i;
-            break;
+    while (1) {
+        // Find and print the current coordinator
+        if (coordinator != -1) {
+            printf("Current coordinator is Node %d.\n", coordinator);
+        } else {
+            printf("No active coordinator.\n");
         }
-    }
 
-    if (newCoordinator != -1) {
-        printf("New coordinator is Node %d.\n", newCoordinator);
-    } else {
-        printf("No active nodes remaining.\n");
+        // Simulate sending messages between processes with random delays
+        int sender, receiver;
+        printf("Enter sender node (0-%d): ", numNodes - 1);
+        scanf("%d", &sender);
+        printf("Enter receiver node (0-%d): ", numNodes - 1);
+        scanf("%d", &receiver);
+
+        if (sender >= 0 && sender < numNodes && receiver >= 0 && receiver < numNodes) {
+            char message[256];
+            printf("Enter message: ");
+            scanf("%s", message);
+
+            sendMessage(sender, receiver, message);
+        } else {
+            printf("Invalid sender or receiver node.\n");
+        }
+
+        // Check if the user pressed 'f' to simulate coordinator failure during the delay
+        if (_kbhit()) {
+            char key = _getch();
+            if (key == 'f') {
+                if (coordinator != -1) {
+                    nodes[coordinator].active = false;
+                    printf("Coordinator Node %d marked as failed.\n", coordinator);
+
+                    // Simulate election process initiated by the coordinator
+                    initiateElection(coordinator, numNodes);
+
+                    // Simulate handling of messages and determining new leader
+                    // ...
+
+                    // Find and print the new coordinator
+                    int newCoordinator = -1;
+                    for (int i = 0; i < numNodes; ++i) {
+                        if (nodes[i].active) {
+                            newCoordinator = i;
+                            break;
+                        }
+                    }
+
+                    if (newCoordinator != -1) {
+                        printf("New coordinator is Node %d.\n", newCoordinator);
+                    } else {
+                        printf("No active nodes remaining.\n");
+                    }
+
+                    coordinator = newCoordinator;
+                } else {
+                    printf("No active coordinator to mark as failed.\n");
+                }
+            }
+        }
     }
 
     // Free allocated memory
@@ -130,5 +158,3 @@ int main() {
 
     return 0;
 }
-
-
